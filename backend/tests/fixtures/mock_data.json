@@ -1,0 +1,82 @@
+{
+  "_note": "Offline sample data mirroring the API-Football response shape. Used when API_FOOTBALL_KEY is missing or USE_MOCK_DATA=1. Not real results.",
+  "fixtures": [
+    {
+      "fixture": {"id": 1001, "date": "2026-06-15T19:00:00+00:00", "status": {"short": "NS"}, "venue": {"name": "MetLife Stadium"}},
+      "league": {"round": "Group Stage - 1"},
+      "teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 6, "name": "Argentina"}},
+      "goals": {"home": null, "away": null}
+    },
+    {
+      "fixture": {"id": 1002, "date": "2026-06-16T16:00:00+00:00", "status": {"short": "NS"}, "venue": {"name": "SoFi Stadium"}},
+      "league": {"round": "Group Stage - 1"},
+      "teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 8, "name": "England"}},
+      "goals": {"home": null, "away": null}
+    },
+    {
+      "fixture": {"id": 1003, "date": "2026-06-14T18:00:00+00:00", "status": {"short": "FT"}, "venue": {"name": "Estadio Azteca"}},
+      "league": {"round": "Group Stage - 1"},
+      "teams": {"home": {"id": 9, "name": "Spain"}, "away": {"id": 25, "name": "Germany"}},
+      "goals": {"home": 2, "away": 1}
+    }
+  ],
+  "team_form": {
+    "10": [
+      {"teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 30, "name": "Chile"}}, "goals": {"home": 3, "away": 0}},
+      {"teams": {"home": {"id": 31, "name": "Peru"}, "away": {"id": 10, "name": "Brazil"}}, "goals": {"home": 1, "away": 2}},
+      {"teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 6, "name": "Argentina"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 32, "name": "Uruguay"}}, "goals": {"home": 2, "away": 0}},
+      {"teams": {"home": {"id": 33, "name": "Colombia"}, "away": {"id": 10, "name": "Brazil"}}, "goals": {"home": 0, "away": 1}}
+    ],
+    "6": [
+      {"teams": {"home": {"id": 6, "name": "Argentina"}, "away": {"id": 32, "name": "Uruguay"}}, "goals": {"home": 2, "away": 1}},
+      {"teams": {"home": {"id": 30, "name": "Chile"}, "away": {"id": 6, "name": "Argentina"}}, "goals": {"home": 0, "away": 3}},
+      {"teams": {"home": {"id": 6, "name": "Argentina"}, "away": {"id": 33, "name": "Colombia"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 31, "name": "Peru"}, "away": {"id": 6, "name": "Argentina"}}, "goals": {"home": 0, "away": 2}},
+      {"teams": {"home": {"id": 6, "name": "Argentina"}, "away": {"id": 10, "name": "Brazil"}}, "goals": {"home": 1, "away": 1}}
+    ],
+    "2": [
+      {"teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 40, "name": "Belgium"}}, "goals": {"home": 2, "away": 2}},
+      {"teams": {"home": {"id": 41, "name": "Portugal"}, "away": {"id": 2, "name": "France"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 42, "name": "Netherlands"}}, "goals": {"home": 3, "away": 1}},
+      {"teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 9, "name": "Spain"}}, "goals": {"home": 2, "away": 0}},
+      {"teams": {"home": {"id": 43, "name": "Croatia"}, "away": {"id": 2, "name": "France"}}, "goals": {"home": 0, "away": 2}}
+    ],
+    "8": [
+      {"teams": {"home": {"id": 8, "name": "England"}, "away": {"id": 43, "name": "Croatia"}}, "goals": {"home": 1, "away": 0}},
+      {"teams": {"home": {"id": 42, "name": "Netherlands"}, "away": {"id": 8, "name": "England"}}, "goals": {"home": 2, "away": 1}},
+      {"teams": {"home": {"id": 8, "name": "England"}, "away": {"id": 25, "name": "Germany"}}, "goals": {"home": 2, "away": 2}},
+      {"teams": {"home": {"id": 40, "name": "Belgium"}, "away": {"id": 8, "name": "England"}}, "goals": {"home": 0, "away": 1}},
+      {"teams": {"home": {"id": 8, "name": "England"}, "away": {"id": 41, "name": "Portugal"}}, "goals": {"home": 1, "away": 1}}
+    ],
+    "9": [
+      {"teams": {"home": {"id": 9, "name": "Spain"}, "away": {"id": 43, "name": "Croatia"}}, "goals": {"home": 3, "away": 0}},
+      {"teams": {"home": {"id": 41, "name": "Portugal"}, "away": {"id": 9, "name": "Spain"}}, "goals": {"home": 2, "away": 2}},
+      {"teams": {"home": {"id": 9, "name": "Spain"}, "away": {"id": 25, "name": "Germany"}}, "goals": {"home": 2, "away": 1}},
+      {"teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 9, "name": "Spain"}}, "goals": {"home": 2, "away": 0}},
+      {"teams": {"home": {"id": 9, "name": "Spain"}, "away": {"id": 42, "name": "Netherlands"}}, "goals": {"home": 1, "away": 0}}
+    ],
+    "25": [
+      {"teams": {"home": {"id": 25, "name": "Germany"}, "away": {"id": 42, "name": "Netherlands"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 8, "name": "England"}, "away": {"id": 25, "name": "Germany"}}, "goals": {"home": 2, "away": 2}},
+      {"teams": {"home": {"id": 25, "name": "Germany"}, "away": {"id": 9, "name": "Spain"}}, "goals": {"home": 1, "away": 2}},
+      {"teams": {"home": {"id": 43, "name": "Croatia"}, "away": {"id": 25, "name": "Germany"}}, "goals": {"home": 0, "away": 2}},
+      {"teams": {"home": {"id": 25, "name": "Germany"}, "away": {"id": 40, "name": "Belgium"}}, "goals": {"home": 3, "away": 1}}
+    ]
+  },
+  "head_to_head": {
+    "10-6": [
+      {"teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 6, "name": "Argentina"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 6, "name": "Argentina"}, "away": {"id": 10, "name": "Brazil"}}, "goals": {"home": 1, "away": 0}},
+      {"teams": {"home": {"id": 10, "name": "Brazil"}, "away": {"id": 6, "name": "Argentina"}}, "goals": {"home": 2, "away": 0}}
+    ],
+    "2-8": [
+      {"teams": {"home": {"id": 2, "name": "France"}, "away": {"id": 8, "name": "England"}}, "goals": {"home": 2, "away": 1}},
+      {"teams": {"home": {"id": 8, "name": "England"}, "away": {"id": 2, "name": "France"}}, "goals": {"home": 0, "away": 0}}
+    ],
+    "9-25": [
+      {"teams": {"home": {"id": 9, "name": "Spain"}, "away": {"id": 25, "name": "Germany"}}, "goals": {"home": 1, "away": 1}},
+      {"teams": {"home": {"id": 25, "name": "Germany"}, "away": {"id": 9, "name": "Spain"}}, "goals": {"home": 2, "away": 1}}
+    ]
+  }
+}
