@@ -86,43 +86,46 @@ def team_meta(name: str) -> dict[str, Any]:
 # --- The fixed knockout tree ----------------------------------------------------------
 # Match ids: R32 = 1..16, R16 = 17..24, QF = 25..28, SF = 29..30, Final = 31.
 # Each R32 seed: (id, home, away, status, home_goals, away_goals).
-# Slot order and the winner-feeds-into links below are the real 2026 ESPN bracket.
+# Layout follows the official 2026 draw: ids 1-8 are the LEFT half (top -> bottom),
+# ids 9-16 the RIGHT half. Adjacent odd/even pairs meet in the Round of 16.
 _SEED_R32: list[tuple[int, str, str, str, int | None, int | None]] = [
-    (1, "South Africa", "Canada", "FT", 0, 1),
-    (2, "Netherlands", "Morocco", "NS", None, None),
-    (3, "Germany", "Paraguay", "NS", None, None),
-    (4, "Brazil", "Japan", "FT", 2, 1),
-    (5, "Mexico", "Ecuador", "NS", None, None),
-    (6, "Ivory Coast", "Norway", "NS", None, None),
-    (7, "France", "Sweden", "NS", None, None),
+    # Left half
+    (1, "Germany", "Paraguay", "NS", None, None),
+    (2, "France", "Sweden", "NS", None, None),
+    (3, "South Africa", "Canada", "FT", 0, 1),
+    (4, "Netherlands", "Morocco", "NS", None, None),
+    (5, "Portugal", "Croatia", "NS", None, None),
+    (6, "Spain", "Austria", "NS", None, None),
+    (7, "United States", "Bosnia-Herzegovina", "NS", None, None),
     (8, "Belgium", "Senegal", "NS", None, None),
-    (9, "United States", "Bosnia-Herzegovina", "NS", None, None),
-    (10, "England", "Congo DR", "NS", None, None),
-    (11, "Portugal", "Croatia", "NS", None, None),
-    (12, "Spain", "Austria", "NS", None, None),
-    (13, "Switzerland", "Algeria", "NS", None, None),
+    # Right half
+    (9, "Brazil", "Japan", "FT", 2, 1),
+    (10, "Ivory Coast", "Norway", "NS", None, None),
+    (11, "Mexico", "Ecuador", "NS", None, None),
+    (12, "England", "Congo DR", "NS", None, None),
+    (13, "Argentina", "Cape Verde", "NS", None, None),
     (14, "Australia", "Egypt", "NS", None, None),
-    (15, "Argentina", "Cape Verde", "NS", None, None),
+    (15, "Switzerland", "Algeria", "NS", None, None),
     (16, "Colombia", "Ghana", "NS", None, None),
 ]
 
 # winner of source match -> (target match id, "home" | "away" slot)
 _LINKS: dict[int, tuple[int, str]] = {
-    # Round of 16
-    1: (17, "home"), 3: (17, "away"),
-    2: (18, "home"), 5: (18, "away"),
-    4: (19, "home"), 6: (19, "away"),
+    # Round of 16 (adjacent R32 pairs)
+    1: (17, "home"), 2: (17, "away"),
+    3: (18, "home"), 4: (18, "away"),
+    5: (19, "home"), 6: (19, "away"),
     7: (20, "home"), 8: (20, "away"),
-    11: (21, "home"), 12: (21, "away"),
-    9: (22, "home"), 10: (22, "away"),
-    14: (23, "home"), 16: (23, "away"),
-    13: (24, "home"), 15: (24, "away"),
+    9: (21, "home"), 10: (21, "away"),
+    11: (22, "home"), 12: (22, "away"),
+    13: (23, "home"), 14: (23, "away"),
+    15: (24, "home"), 16: (24, "away"),
     # Quarter-finals
     17: (25, "home"), 18: (25, "away"),
-    21: (26, "home"), 22: (26, "away"),
-    19: (27, "home"), 20: (27, "away"),
+    19: (26, "home"), 20: (26, "away"),
+    21: (27, "home"), 22: (27, "away"),
     23: (28, "home"), 24: (28, "away"),
-    # Semi-finals
+    # Semi-finals (left: 29, right: 30)
     25: (29, "home"), 26: (29, "away"),
     27: (30, "home"), 28: (30, "away"),
     # Final
@@ -145,17 +148,14 @@ _ROUND_OF: dict[int, str] = {
     31: "F",
 }
 
-# Stadiums per match (real ESPN venues) for on-screen flavour.
+# Stadiums for the Round of 32 (real ESPN venues) for on-screen flavour. Later rounds are
+# neutral and undecided until the bracket plays out, so they are left unset.
 _VENUES: dict[int, str] = {
-    1: "SoFi Stadium", 2: "Estadio BBVA", 3: "Gillette Stadium", 4: "NRG Stadium",
-    5: "Estadio Banorte", 6: "AT&T Stadium", 7: "MetLife Stadium", 8: "Lumen Field",
-    9: "Levi's Stadium", 10: "Mercedes-Benz Stadium", 11: "BMO Field", 12: "SoFi Stadium",
-    13: "BC Place", 14: "AT&T Stadium", 15: "Hard Rock Stadium",
-    16: "GEHA Field at Arrowhead", 17: "NRG Stadium", 18: "Lincoln Financial Field",
-    19: "MetLife Stadium", 20: "Estadio Banorte", 21: "AT&T Stadium", 22: "Lumen Field",
-    23: "Mercedes-Benz Stadium", 24: "BC Place", 25: "Gillette Stadium", 26: "SoFi Stadium",
-    27: "Hard Rock Stadium", 28: "GEHA Field at Arrowhead", 29: "AT&T Stadium",
-    30: "Mercedes-Benz Stadium", 31: "MetLife Stadium",
+    1: "Gillette Stadium", 2: "MetLife Stadium", 3: "SoFi Stadium", 4: "Estadio BBVA",
+    5: "BMO Field", 6: "SoFi Stadium", 7: "Levi's Stadium", 8: "Lumen Field",
+    9: "NRG Stadium", 10: "AT&T Stadium", 11: "Estadio Banorte", 12: "Mercedes-Benz Stadium",
+    13: "Hard Rock Stadium", 14: "AT&T Stadium", 15: "BC Place",
+    16: "GEHA Field at Arrowhead", 31: "MetLife Stadium",
 }
 
 

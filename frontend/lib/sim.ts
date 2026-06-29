@@ -9,14 +9,14 @@ import type { BracketMatch, BracketSim, Side } from "./types";
 // match ids (see backend/oracle/bracket.py) stacked top-to-bottom so feeders sit adjacent.
 export const LAYOUT = {
   left: {
-    R32: [1, 3, 2, 5, 11, 12, 9, 10],
-    R16: [17, 18, 21, 22],
+    R32: [1, 2, 3, 4, 5, 6, 7, 8],
+    R16: [17, 18, 19, 20],
     QF: [25, 26],
     SF: [29],
   },
   right: {
-    R32: [4, 6, 7, 8, 14, 16, 13, 15],
-    R16: [19, 20, 23, 24],
+    R32: [9, 10, 11, 12, 13, 14, 15, 16],
+    R16: [21, 22, 23, 24],
     QF: [27, 28],
     SF: [30],
   },
