@@ -91,7 +91,7 @@ def team_meta(name: str) -> dict[str, Any]:
 _SEED_R32: list[tuple[int, str, str, str, int | None, int | None]] = [
     # Left half
     (1, "Germany", "Paraguay", "NS", None, None),
-    (2, "France", "Sweden", "NS", None, None),
+    (2, "Sweden", "France", "NS", None, None),
     (3, "South Africa", "Canada", "FT", 0, 1),
     (4, "Netherlands", "Morocco", "NS", None, None),
     (5, "Portugal", "Croatia", "NS", None, None),
@@ -100,7 +100,7 @@ _SEED_R32: list[tuple[int, str, str, str, int | None, int | None]] = [
     (8, "Belgium", "Senegal", "NS", None, None),
     # Right half
     (9, "Brazil", "Japan", "FT", 2, 1),
-    (10, "Ivory Coast", "Norway", "NS", None, None),
+    (10, "Norway", "Ivory Coast", "NS", None, None),
     (11, "Mexico", "Ecuador", "NS", None, None),
     (12, "England", "Congo DR", "NS", None, None),
     (13, "Argentina", "Cape Verde", "NS", None, None),
