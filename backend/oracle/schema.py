@@ -27,6 +27,7 @@ class TeamForm(BaseModel):
     logo: str | None = None
     color: str | None = None
     fifa_rank: int | None = None
+    rating: float | None = Field(default=None, description="0-100 strength prior")
     last5: list[str] = Field(default_factory=list, description="Recent results e.g. ['W','D','L']")
     goals_for_avg: float | None = None
     goals_against_avg: float | None = None

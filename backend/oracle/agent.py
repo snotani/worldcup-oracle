@@ -19,7 +19,7 @@ from pathlib import Path
 from .config import Settings, get_settings
 from .models import CompletionResult, get_model_backend
 from .personas import get_persona
-from .schema import MatchContext, MatchPrediction, StoredPrediction
+from .schema import MatchContext, MatchPrediction, Probabilities, StoredPrediction
 from .store import Store
 from .tools import get_provider
 from .trace import RunTrace
@@ -42,6 +42,7 @@ def build_match_brief(ctx: MatchContext) -> str:
         "venue": ctx.venue,
         "home": {
             "name": ctx.home.name,
+            "strength_rating": ctx.home.rating,
             "last5": ctx.home.last5,
             "goals_for_avg": ctx.home.goals_for_avg,
             "goals_against_avg": ctx.home.goals_against_avg,
@@ -49,6 +50,7 @@ def build_match_brief(ctx: MatchContext) -> str:
         },
         "away": {
             "name": ctx.away.name,
+            "strength_rating": ctx.away.rating,
             "last5": ctx.away.last5,
             "goals_for_avg": ctx.away.goals_for_avg,
             "goals_against_avg": ctx.away.goals_against_avg,
@@ -93,6 +95,23 @@ def parse_prediction(text: str, match_id: int, temperature: float = 1.0) -> Matc
     return MatchPrediction.model_validate(data)
 
 
+def advancement(probs: Probabilities) -> tuple[float, float]:
+    """Convert 1X2 probabilities into knockout advance probabilities (no draws).
+
+    A knockout has no draw: a level game goes to extra time / penalties. We hand the would-be
+    draw mass to each side in proportion to its win probability, which keeps the favourite
+    favoured without ever flipping the ranking.
+    """
+    home, away = probs.home, probs.away
+    base = home + away
+    if base <= 0:
+        return 0.5, 0.5
+    home_adv = home + probs.draw * (home / base)
+    away_adv = away + probs.draw * (away / base)
+    total = home_adv + away_adv or 1.0
+    return round(home_adv / total, 4), round(away_adv / total, 4)
+
+
 def predict_match(
     match_id: int,
     model_id: str | None = None,
@@ -109,13 +128,47 @@ def predict_match(
     trace = RunTrace(label=f"match {match_id}", model_id=model_id)
 
     provider = get_provider(settings)
-    backend = get_model_backend(settings, mock=mock_model)
 
     # Step 1: gather data (the agent's tools).
     with trace.step("gather_data", "fetch fixture, form, head-to-head") as s:
         ctx = provider.get_match_context(match_id)
         s.detail(f"{ctx.home.name} vs {ctx.away.name} | form {ctx.home.last5} vs {ctx.away.last5}")
         s.add(home=ctx.home.name, away=ctx.away.name)
+
+    return predict_from_context(
+        ctx,
+        model_id=model_id,
+        persona=persona,
+        settings=settings,
+        store=store,
+        mock_model=mock_model,
+        save=save,
+        trace=trace,
+    )
+
+
+def predict_from_context(
+    ctx: MatchContext,
+    model_id: str | None = None,
+    persona: str | None = None,
+    *,
+    settings: Settings | None = None,
+    store: Store | None = None,
+    mock_model: bool = False,
+    save: bool = True,
+    trace: RunTrace | None = None,
+) -> tuple[StoredPrediction, RunTrace]:
+    """Run prompt -> model -> parse -> validate for an already-gathered context.
+
+    Splitting this out lets the bracket simulator predict hypothetical matchups (a future
+    quarter-final between two teams that haven't met yet) without a fixture lookup.
+    """
+    settings = settings or get_settings()
+    model_id = model_id or settings.default_model
+    match_id = ctx.match_id
+    trace = trace or RunTrace(label=f"match {match_id}", model_id=model_id)
+
+    backend = get_model_backend(settings, mock=mock_model)
 
     # Step 2: build the prompt from the spec template + brief.
     with trace.step("build_prompt", "inject match brief into the prediction prompt") as s:

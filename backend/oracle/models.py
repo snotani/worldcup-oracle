@@ -145,10 +145,14 @@ class MockModelBackend:
             home_name, away_name = "Home", "Away"
         else:
             home_name, away_name = context.home.name, context.away.name
-            home_pts = _form_points(context.home.last5) + 1.5  # home advantage
-            away_pts = _form_points(context.away.last5)
+            # Strength rating dominates, recent form + home edge + H2H modulate. A 0-100
+            # rating maps to ~0-7 points so a clear quality gap shows up as a clear favourite.
+            home_pts = (context.home.rating or 70) / 14.0 + 1.0  # home/first-named edge
+            away_pts = (context.away.rating or 70) / 14.0
+            home_pts += _form_points(context.home.last5) / 3.0
+            away_pts += _form_points(context.away.last5) / 3.0
             home_pts += _h2h_bias(context.head_to_head)
-            total = home_pts + away_pts + 4.0
+            total = home_pts + away_pts + 3.0
             base_home = home_pts / total
             base_away = away_pts / total
             base_draw = max(0.12, 1.0 - base_home - base_away)
