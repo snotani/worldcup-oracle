@@ -2058,6 +2058,7 @@ code {
   border-radius: 14px;
   background: var(--bg-card);
   border: 1px solid var(--border);
+  color: var(--text);
   cursor: pointer;
   transition: all 0.18s ease;
   position: relative;
