@@ -147,7 +147,9 @@ class MockModelBackend:
             home_name, away_name = context.home.name, context.away.name
             # Strength rating dominates, recent form + home edge + H2H modulate. A 0-100
             # rating maps to ~0-7 points so a clear quality gap shows up as a clear favourite.
-            home_pts = (context.home.rating or 70) / 14.0 + 1.0  # home/first-named edge
+            # Knockouts are at neutral venues, so the first-named edge nearly vanishes.
+            home_edge = 0.15 if context.neutral_venue else 1.0
+            home_pts = (context.home.rating or 70) / 14.0 + home_edge
             away_pts = (context.away.rating or 70) / 14.0
             home_pts += _form_points(context.home.last5) / 3.0
             away_pts += _form_points(context.away.last5) / 3.0

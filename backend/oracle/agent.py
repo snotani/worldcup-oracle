@@ -40,6 +40,7 @@ def build_match_brief(ctx: MatchContext) -> str:
         "stage": ctx.stage,
         "kickoff_utc": ctx.kickoff_utc.isoformat() if ctx.kickoff_utc else None,
         "venue": ctx.venue,
+        "neutral_venue": ctx.neutral_venue,
         "home": {
             "name": ctx.home.name,
             "strength_rating": ctx.home.rating,

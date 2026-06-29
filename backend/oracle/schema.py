@@ -47,6 +47,7 @@ class MatchContext(BaseModel):
         default_factory=list, description="Recent H2H results from home team's perspective"
     )
     venue: str | None = None
+    neutral_venue: bool = False
     notes: list[str] = Field(default_factory=list)
 
 
