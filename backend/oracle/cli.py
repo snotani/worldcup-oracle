@@ -24,6 +24,7 @@ from .dashboard import build_payload
 from .eval.backtest import run_backtest, score_stored_predictions
 from .models import BATTLE_REGISTRY, get_model_backend
 from .personas import PERSONAS
+from .simulate import simulate_battle, simulate_bracket
 from .store import Store
 from .tools import get_provider
 
@@ -225,43 +226,91 @@ def models() -> None:
 
 
 @app.command()
-def export(
-    out: Path = typer.Option(_DEFAULT_EXPORT, help="Output JSON path for the dashboard"),
+def simulate(
+    model: str = typer.Option("", help="Model id or friendly name (default from settings)"),
+    explain: bool = typer.Option(False, "--explain", help="Print the run trace"),
     mock: bool = typer.Option(False, "--mock", help="Use the offline mock model"),
-    persona: str = typer.Option("gaffer", help=f"Persona for cards: {', '.join(PERSONAS)}"),
-    upcoming_limit: int = typer.Option(6, help="Upcoming fixtures to include (battle + cards)"),
-    finished_limit: int = typer.Option(8, help="Recent finished matches to score"),
+) -> None:
+    """Play the whole knockout bracket forward with one model (Tab 1)."""
+    settings = _settings(mock)
+    model_id = BATTLE_REGISTRY.get(model, model) or settings.default_model
+    name = next((n for n, m in BATTLE_REGISTRY.items() if m == model_id), model_id)
+    b = simulate_bracket(model_id, model_name=name, settings=settings, mock_model=mock)
+    console.print(
+        f"[bold]Champion: {b['champion']['name']}[/]  "
+        f"(beat {b['runner_up']['name']} in the final)"
+    )
+    table = Table(title=f"{name}'s road to the title")
+    table.add_column("Round")
+    table.add_column("Result")
+    table.add_column("Adv", justify="right")
+    for m in b["path"]:
+        table.add_row(m["round_name"], f"{m['winner_name']} {m['score']} {m['loser_name']}",
+                      f"{m['confidence']:.0%}")
+    console.print(table)
+    if b["upsets"]:
+        console.print(
+            "[yellow]Upsets:[/] "
+            + ", ".join(f"{u['winner_name']} over {u['loser_name']}" for u in b["upsets"])
+        )
+
+
+@app.command(name="simulate-battle")
+def simulate_battle_cmd(
     models: str = typer.Option(
         ",".join(BATTLE_REGISTRY), help="Comma-separated battle models (friendly names or ids)"
     ),
-    workers: int = typer.Option(6, help="Concurrent model calls"),
+    mock: bool = typer.Option(False, "--mock", help="Use the offline mock model"),
+) -> None:
+    """Run the full bracket for every model and compare champions (Tab 2)."""
+    settings = _settings(mock)
+    names = [m.strip() for m in models.split(",") if m.strip()]
+    chosen = {n: BATTLE_REGISTRY.get(n, n) for n in names}
+    result = simulate_battle(chosen, settings=settings, mock_model=mock)
+    table = Table(title="Bracket battle - who wins it all?")
+    table.add_column("Model")
+    table.add_column("Champion")
+    table.add_column("Finalists")
+    for b in result["brackets"]:
+        table.add_row(
+            b["model_name"], b["champion"]["name"],
+            " vs ".join(f["name"] for f in b["finalists"]),
+        )
+    console.print(table)
+    c = result["consensus"]
+    console.print(
+        f"Consensus champion: [bold]{c['consensus_champion']['name']}[/] "
+        f"({c['consensus_champion']['votes']}/{c['consensus_champion']['of']} models) · "
+        f"R32 agreement {c['r32_agreement']:.0%} · {c['distinct_champions']} distinct champions"
+    )
+
+
+@app.command()
+def export(
+    out: Path = typer.Option(_DEFAULT_EXPORT, help="Output JSON path for the dashboard"),
+    mock: bool = typer.Option(False, "--mock", help="Use the offline mock model"),
+    models: str = typer.Option(
+        ",".join(BATTLE_REGISTRY), help="Comma-separated battle models (friendly names or ids)"
+    ),
 ) -> None:
     """Build the dashboard JSON payload (feeds the Next.js frontend).
 
-    Live model calls are the slow part: roughly
-    (finished_limit + upcoming_limit) x len(models) predictions. Start small.
+    Each model plays the full bracket, so a live run is ~31 x len(models) predictions.
+    Mock runs are instant.
     """
     battle = [m.strip() for m in models.split(",") if m.strip()]
-    n_calls = (finished_limit + upcoming_limit) * len(battle)
     console.print(
-        f"[dim]Running ~{n_calls} model predictions "
-        f"({'mock' if mock else 'live'}, {workers} workers)...[/]"
+        f"[dim]Simulating the bracket for {len(battle)} models "
+        f"({'mock' if mock else 'live'})...[/]"
     )
-    payload = build_payload(
-        settings=_settings(mock),
-        mock_model=mock,
-        persona=persona,
-        battle=battle,
-        upcoming_limit=upcoming_limit,
-        finished_limit=finished_limit,
-        workers=workers,
-    )
+    payload = build_payload(settings=_settings(mock), mock_model=mock, battle=battle)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2))
     console.print(
         f"Wrote dashboard payload to [bold]{out}[/] "
-        f"({len(payload['battle_matches'])} upcoming, {payload['scoreboard']['n_matches']} scored, "
-        f"{len(payload['leaderboard'])} models)."
+        f"(Oracle champion: {payload['simulation']['champion']['name']}, "
+        f"{len(payload['model_brackets'])} models, "
+        f"consensus: {payload['consensus']['consensus_champion']['name']})."
     )
 
 
