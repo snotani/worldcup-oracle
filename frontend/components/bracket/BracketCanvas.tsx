@@ -22,13 +22,6 @@ interface Conn {
   source: number; // source match id (connector lights up once it's decided)
 }
 
-const ROUND_LABEL: Record<string, string> = {
-  R32: "Round of 32",
-  R16: "Round of 16",
-  QF: "Quarters",
-  SF: "Semis",
-};
-
 export default function BracketCanvas({
   sim,
   step,
@@ -40,10 +33,12 @@ export default function BracketCanvas({
 }) {
   const matches = matchMap(sim);
   const feeders = feederMap(sim);
+  const fitRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [conns, setConns] = useState<Conn[]>([]);
   const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [scale, setScale] = useState(1);
 
   const setNodeRef = useCallback((id: number) => {
     return (el: HTMLDivElement | null) => {
@@ -53,10 +48,17 @@ export default function BracketCanvas({
   }, []);
 
   const measure = useCallback(() => {
+    const fit = fitRef.current;
     const container = containerRef.current;
-    if (!container) return;
+    if (!fit || !container) return;
+
+    // scrollWidth/Height are layout pixels, unaffected by the CSS transform we apply, so we
+    // can derive the fit-scale and then convert measured (scaled) positions back to local px.
+    const naturalW = container.scrollWidth;
+    const naturalH = container.scrollHeight;
+    const s = naturalW > 0 ? Math.min(1, fit.clientWidth / naturalW) : 1;
+
     const base = container.getBoundingClientRect();
-    setDims({ w: base.width, h: base.height });
     const next: Conn[] = [];
     for (const m of matches.values()) {
       if (!m.feeds) continue;
@@ -64,27 +66,25 @@ export default function BracketCanvas({
       const srcEl = nodeRefs.current.get(m.id);
       const tgtEl = nodeRefs.current.get(targetId);
       if (!srcEl || !tgtEl) continue;
-      const s = srcEl.getBoundingClientRect();
-      const t = tgtEl.getBoundingClientRect();
+      const src = srcEl.getBoundingClientRect();
+      const tgt = tgtEl.getBoundingClientRect();
       const side = sideOf(m.id);
-      const sx = side === "right" ? s.left - base.left : s.right - base.left;
-      const tx =
-        side === "right"
-          ? t.right - base.left
-          : sideOf(targetId) === "final"
-            ? t.left - base.left
-            : t.left - base.left;
-      const sy = s.top - base.top + s.height / 2;
-      const ty = t.top - base.top + t.height / 2;
+      const sx = (((side === "right" ? src.left : src.right) - base.left) / s);
+      const tx = (((side === "right" ? tgt.right : tgt.left) - base.left) / s);
+      const sy = (src.top - base.top + src.height / 2) / s;
+      const ty = (tgt.top - base.top + tgt.height / 2) / s;
       const mx = (sx + tx) / 2;
       next.push({ id: m.id, source: m.id, d: `M ${sx} ${sy} H ${mx} V ${ty} H ${tx}` });
     }
+    setScale(s);
+    setDims({ w: naturalW, h: naturalH });
     setConns(next);
   }, [matches]);
 
   useLayoutEffect(() => {
     measure();
     const ro = new ResizeObserver(() => measure());
+    if (fitRef.current) ro.observe(fitRef.current);
     if (containerRef.current) ro.observe(containerRef.current);
     window.addEventListener("resize", measure);
     return () => {
@@ -92,7 +92,7 @@ export default function BracketCanvas({
       window.removeEventListener("resize", measure);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sim]);
+  }, [sim, size]);
 
   const renderCol = (sideKey: "left" | "right", code: keyof typeof LAYOUT.left) => {
     const ids = LAYOUT[sideKey][code] as readonly number[];
@@ -101,7 +101,6 @@ export default function BracketCanvas({
         {ids.map((id) => {
           const m = matches.get(id);
           if (!m) return null;
-          const decided = isDecided(id, step);
           return (
             <BracketMatchNode
               key={id}
@@ -109,7 +108,7 @@ export default function BracketCanvas({
               match={m}
               homeKnown={slotKnown(m, "home", step, feeders)}
               awayKnown={slotKnown(m, "away", step, feeders)}
-              decided={decided}
+              decided={isDecided(id, step)}
               active={step === id}
               size={size}
             />
@@ -124,49 +123,55 @@ export default function BracketCanvas({
   const champion = finalDecided ? final[final.winner] : null;
 
   return (
-    <div className={`bracket-canvas bracket-${size}`} ref={containerRef}>
-      <svg className="bracket-lines" width={dims.w} height={dims.h}>
-        {conns.map((c) => (
-          <path
-            key={c.id}
-            d={c.d}
-            className={`bline ${isDecided(c.source, step) ? "bline-on" : ""}`}
-            fill="none"
-          />
-        ))}
-      </svg>
+    <div className="bracket-fit" ref={fitRef} style={{ height: dims.h ? dims.h * scale : undefined }}>
+      <div
+        className={`bracket-canvas bracket-${size}`}
+        ref={containerRef}
+        style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
+      >
+        <svg className="bracket-lines" width={dims.w} height={dims.h}>
+          {conns.map((c) => (
+            <path
+              key={c.id}
+              d={c.d}
+              className={`bline ${isDecided(c.source, step) ? "bline-on" : ""}`}
+              fill="none"
+            />
+          ))}
+        </svg>
 
-      <div className="bracket-side bracket-left">
-        {ROUND_CODES.map((code) => renderCol("left", code))}
-      </div>
-
-      <div className="bracket-center">
-        <div className="bcenter-label">Final</div>
-        <BracketMatchNode
-          ref={setNodeRef(FINAL_ID)}
-          match={final}
-          homeKnown={slotKnown(final, "home", step, feeders)}
-          awayKnown={slotKnown(final, "away", step, feeders)}
-          decided={finalDecided}
-          active={step === FINAL_ID}
-          size={size}
-        />
-        <div className={`champ-pod ${champion ? "champ-on" : ""}`}>
-          <IconTrophy size={size === "sm" ? 18 : 26} />
-          {champion ? (
-            <>
-              <TeamCrest team={champion} size={size === "sm" ? 26 : 40} />
-              <div className="champ-name">{champion.name}</div>
-              <div className="champ-tag">Predicted champion</div>
-            </>
-          ) : (
-            <div className="champ-tag champ-wait">Lifts the trophy?</div>
-          )}
+        <div className="bracket-side bracket-left">
+          {ROUND_CODES.map((code) => renderCol("left", code))}
         </div>
-      </div>
 
-      <div className="bracket-side bracket-right">
-        {[...ROUND_CODES].reverse().map((code) => renderCol("right", code))}
+        <div className="bracket-center">
+          <div className="bcenter-label">Final</div>
+          <BracketMatchNode
+            ref={setNodeRef(FINAL_ID)}
+            match={final}
+            homeKnown={slotKnown(final, "home", step, feeders)}
+            awayKnown={slotKnown(final, "away", step, feeders)}
+            decided={finalDecided}
+            active={step === FINAL_ID}
+            size={size}
+          />
+          <div className={`champ-pod ${champion ? "champ-on" : ""}`}>
+            <IconTrophy size={size === "sm" ? 18 : 26} />
+            {champion ? (
+              <>
+                <TeamCrest team={champion} size={size === "sm" ? 26 : 40} />
+                <div className="champ-name">{champion.name}</div>
+                <div className="champ-tag">Predicted champion</div>
+              </>
+            ) : (
+              <div className="champ-tag champ-wait">Lifts the trophy?</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bracket-side bracket-right">
+          {[...ROUND_CODES].reverse().map((code) => renderCol("right", code))}
+        </div>
       </div>
     </div>
   );

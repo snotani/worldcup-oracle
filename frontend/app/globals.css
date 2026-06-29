@@ -1528,13 +1528,17 @@ code {
 /* ====================================================================== */
 /* Bracket simulation                                                      */
 /* ====================================================================== */
+.bracket-fit {
+  width: 100%;
+  overflow: hidden;
+}
 .bracket-canvas {
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: 18px;
+  gap: 16px;
   padding: 12px 4px;
-  overflow-x: auto;
+  width: max-content;
 }
 .bracket-lines {
   position: absolute;
@@ -1557,25 +1561,20 @@ code {
 .bracket-side {
   display: flex;
   align-items: stretch;
-  gap: 18px;
+  gap: 14px;
   z-index: 1;
-}
-.bracket-left {
-  flex: 1;
-}
-.bracket-right {
-  flex: 1;
+  flex: 0 0 auto;
 }
 .bcol {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   gap: 8px;
-  min-width: 92px;
-  flex: 1;
+  width: 94px;
+  flex: 0 0 auto;
 }
 .bracket-md .bcol {
-  min-width: 150px;
+  width: 152px;
 }
 .bracket-center {
   display: flex;
@@ -1584,10 +1583,11 @@ code {
   align-items: center;
   gap: 10px;
   z-index: 2;
-  min-width: 150px;
+  flex: 0 0 auto;
+  width: 150px;
 }
 .bracket-md .bracket-center {
-  min-width: 190px;
+  width: 190px;
 }
 .bcenter-label {
   font-size: 11px;
