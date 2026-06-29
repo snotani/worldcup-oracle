@@ -1,14 +1,16 @@
 // Types mirroring the payload produced by the backend `oracle export` / FastAPI /api/dashboard.
 
 export type Probs = { home: number; draw: number; away: number };
-
 export type Outcome = "home" | "draw" | "away";
+export type Side = "home" | "away";
 
 export interface TeamMeta {
   name: string;
   abbr: string | null;
   logo: string | null;
   color: string | null;
+  rating?: number;
+  form?: string[];
 }
 
 export interface TraceStep {
@@ -29,159 +31,75 @@ export interface RunTrace {
   steps: TraceStep[];
 }
 
-export interface CalibrationBin {
-  lower: number;
-  upper: number;
-  count: number;
-  avg_confidence: number;
-  accuracy: number;
-}
-
-export interface MetricSummary {
-  name: string;
-  n: number;
-  accuracy: number;
-  brier: number;
-  log_loss: number;
-  calibration: CalibrationBin[];
-}
-
-export interface ScoreboardRow {
-  match_id: number;
-  home_team: string;
-  away_team: string;
-  home?: TeamMeta;
-  away?: TeamMeta;
-  kickoff_utc?: string | null;
-  stage?: string | null;
-  venue?: string | null;
-  actual_outcome: Outcome;
-  actual_score: string;
-  agent_pick: Outcome;
-  agent_correct: boolean;
-  agent_probs: Probs;
-  agent_confidence?: number;
-}
-
-export interface Scoreboard {
-  model_id: string;
-  n_matches: number;
-  summaries: MetricSummary[];
-  rows: ScoreboardRow[];
-}
-
-export interface LeaderboardRow {
-  name: string;
-  model_id: string;
-  matches: number;
-  correct: number;
-  accuracy: number;
-  brier: number;
-  log_loss: number;
-}
-
-export interface BattlePick {
-  name: string;
-  model_id: string;
-  pick: Outcome;
-  probs: Probs;
-  predicted_score: string | null;
-  confidence: number;
-  rationale: string;
-  trace: RunTrace;
-  delta_vs_crowd?: number;
-  against_consensus?: boolean;
-  is_maverick?: boolean;
-}
-
-export interface BattleMatch {
-  match_id: number;
-  home_team: string;
-  away_team: string;
-  home?: TeamMeta;
-  away?: TeamMeta;
-  kickoff_utc: string | null;
-  stage: string | null;
-  venue?: string | null;
-  consensus?: { pick: Outcome; votes: number; of: number };
-  vote_split?: Record<Outcome, number>;
-  distinct_picks?: number;
-  split_label?: string;
-  prob_spread?: number;
-  score_spread?: number;
-  disagreement?: number;
-  maverick?: { name: string; model_id: string; pick: Outcome; delta: number };
-  picks: BattlePick[];
-}
-
-export interface InsightCall {
-  match_id: number;
+export interface AgentFeature {
+  key: string;
   label: string;
-  model: string;
-  model_id: string;
-  pick: Outcome;
-  pick_label: string;
+  detail: string;
+}
+
+export interface BracketMatch {
+  id: number;
+  round: string; // R32 | R16 | QF | SF | F
+  round_name: string;
+  venue: string | null;
+  home: TeamMeta;
+  away: TeamMeta;
+  home_adv: number;
+  away_adv: number;
+  winner: Side;
+  winner_name: string;
+  loser_name: string;
+  score: string;
   confidence: number;
-  against_consensus?: boolean;
+  is_result: boolean;
+  is_upset: boolean;
+  feeds: [number, string] | null;
+  rationale: string;
 }
 
-export interface BattleInsights {
-  biggest_debate?: {
-    match_id: number;
-    label: string;
-    home?: TeamMeta;
-    away?: TeamMeta;
-    split_label: string;
-    disagreement: number;
-  };
-  boldest_call?: InsightCall;
-  upset_alert?: InsightCall | null;
-  maverick_model?: { name: string; model_id: string; contrarian: number; delta: number } | null;
+export interface RoundGroup {
+  code: string;
+  name: string;
+  matches: BracketMatch[];
 }
 
-export interface PersonaCard {
-  match_id: number;
-  home_team: string;
-  away_team: string;
-  home?: TeamMeta;
-  away?: TeamMeta;
-  kickoff_utc: string | null;
-  stage?: string | null;
-  venue?: string | null;
-  persona: string;
-  persona_name: string;
-  persona_message: string | null;
-  pick: Outcome;
-  probs: Probs;
-  predicted_score: string | null;
-  confidence?: number;
-  rationale?: string;
-  model_id?: string;
+export interface BracketSim {
+  model_id: string;
+  model_name: string;
+  champion: TeamMeta;
+  runner_up: TeamMeta;
+  finalists: TeamMeta[];
+  final: BracketMatch;
+  rounds: RoundGroup[];
+  path: BracketMatch[];
+  upsets: BracketMatch[];
   trace: RunTrace;
 }
 
-export interface DashboardSummary {
-  headline_accuracy: number;
-  headline_brier: number;
-  coin_flip_accuracy: number;
-  edge_vs_coin: number;
-  n_scored: number;
-  n_upcoming: number;
-  n_models: number;
-  total_predictions: number;
-  best_model: LeaderboardRow | null;
-  default_model: string;
+export interface ContestedMatch {
+  id: number;
+  home: TeamMeta;
+  away: TeamMeta;
+  tally: Record<string, number>;
+  split: string;
+}
+
+export interface Consensus {
+  champion_votes: Record<string, number>;
+  finalist_votes: Record<string, number>;
+  consensus_champion: { name: string; votes: number; of: number; meta: TeamMeta };
+  distinct_champions: number;
+  r32_agreement: number;
+  contested: ContestedMatch[];
 }
 
 export interface Dashboard {
   generated_at: string;
   mock: boolean;
   competition: string;
-  summary?: DashboardSummary;
-  scoreboard: Scoreboard;
-  leaderboard: LeaderboardRow[];
-  battle_insights?: BattleInsights;
-  battle_matches: BattleMatch[];
-  cards: PersonaCard[];
-  personas: { id: string; name: string; tagline: string }[];
+  agent_features: AgentFeature[];
+  simulation: BracketSim;
+  model_brackets: BracketSim[];
+  consensus: Consensus;
+  models: { name: string; model_id: string }[];
 }
