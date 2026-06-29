@@ -1,13 +1,15 @@
-# The Oracle — a World Cup 2026 prediction agent
+# The Oracle — a World Cup 2026 bracket-prediction agent
 
-An AI agent that predicts FIFA World Cup 2026 matches, built to teach the **full agent
-lifecycle** on camera: problem → spec → spec-driven build → evals → results.
+An AI agent that **simulates the entire FIFA World Cup 2026 knockout bracket forward** — from
+where the tournament stands today to who lifts the trophy — built to teach the full agent
+lifecycle on camera: problem → spec → spec-driven build → simulation → results.
 
-One modular agent powers three content angles:
+One modular agent powers two videos:
 
-- **A — Beat the bookies:** how accurate is it, vs honest baselines? (scoreboard)
-- **B — Model battle:** the same agent on GPT vs Claude vs Gemini vs Grok. (leaderboard)
-- **C — The persona:** identical predictions, wrapped in a character voice. (shareable cards)
+- **Video 1 — The Oracle:** the agent explains the signals it uses, then plays the live bracket
+  round by round (Round of 32 → Final) to a single predicted champion.
+- **Video 2 — Model Battle:** the same bracket run by Claude, ChatGPT, Gemini, Grok and
+  Composer — who do they crown, and where do they disagree?
 
 Everything is **explainable**: every module says what it does and why, and every prediction
 emits a step-by-step **run trace** you can literally watch.
@@ -19,11 +21,10 @@ cd backend
 uv venv --python 3.12 .venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 
-oracle predict 1001 --mock --explain        # one prediction + the run trace
-oracle battle 1001 --mock                    # all models on one match (Angle B)
-oracle eval --mock                           # backtest vs baselines (Angle A)
-oracle predict 1001 --mock --persona gaffer  # personality (Angle C)
-oracle export --mock                         # build the dashboard payload
+oracle simulate --mock --explain     # one agent plays the whole bracket (Video 1)
+oracle simulate-battle --mock        # all 5 models, champions + consensus (Video 2)
+oracle predict 1001 --mock --explain # a single-match prediction + run trace (primitive)
+oracle export --mock                 # build the dashboard payload
 ```
 
 Then the dashboard:
@@ -42,16 +43,14 @@ you need is `CURSOR_API_KEY` (Cursor Dashboard → API Keys) for the models.
 
 ```bash
 oracle models                                  # list available model ids
-oracle fixtures --status NS                     # live upcoming 2026 matches
-oracle predict <match_id> --explain
-oracle battle <match_id> --models claude,gpt,gemini,grok
-oracle eval                                     # backtest over recent finished matches
-oracle export --finished-limit 8 --upcoming-limit 6   # regenerate the dashboard each matchday
-uvicorn oracle.api:app --reload                # or serve live data via FastAPI
+oracle fixtures --status NS                    # live upcoming 2026 matches
+oracle simulate                                # the default agent plays the bracket
+oracle simulate-battle --models claude,gpt,gemini,grok,composer
+oracle export                                  # regenerate the dashboard each matchday
 ```
 
-Live model calls are the slow part: roughly `(finished_limit + upcoming_limit) x models`
-predictions, run concurrently (`--workers`). Start small, scale up.
+Live model calls are the slow part: one full bracket is up to 31 predictions, so
+`oracle export` runs roughly `31 x models`. Mock runs are instant.
 
 ### Data sources
 
@@ -67,14 +66,14 @@ predictions, run concurrently (`--workers`). Start small, scale up.
 ```mermaid
 flowchart LR
   data["Data tools (fixtures, form, H2H)"] --> agent
+  bracket["Bracket state (bracket.py)"] --> sim
   agent["Agent loop (spec + prompt + schema)"] --> sdk["Cursor Agent SDK"]
   sdk --> parse["Parse + validate (schema.py)"]
-  parse --> store["Store (sqlite)"]
   agent --> trace["Run trace (every step)"]
-  store --> evals["Eval harness"]
-  store --> ui["Next.js dashboard"]
+  sim["Forward simulator (simulate.py)"] --> agent
+  sim --> payload["Dashboard payload"]
+  payload --> ui["Next.js dashboard"]
   trace --> ui
-  persona["Persona layer"] -.-> agent
   registry["Model registry (swap id)"] -.-> sdk
 ```
 
@@ -87,7 +86,7 @@ flowchart LR
 | Spec-driven dev | [`backend/oracle/schema.py`](backend/oracle/schema.py) |
 | Build | [`backend/oracle/agent.py`](backend/oracle/agent.py), [`backend/oracle/models.py`](backend/oracle/models.py) |
 | Tools / data | [`backend/oracle/tools/`](backend/oracle/tools) |
-| Persona | [`backend/oracle/personas/`](backend/oracle/personas) |
+| Bracket + simulation | [`backend/oracle/bracket.py`](backend/oracle/bracket.py), [`backend/oracle/simulate.py`](backend/oracle/simulate.py) |
 | Evals | [`backend/oracle/eval/`](backend/oracle/eval) |
 | Results | [`frontend/`](frontend), [`backend/oracle/dashboard.py`](backend/oracle/dashboard.py) |
 | Explainability | [`backend/oracle/trace.py`](backend/oracle/trace.py) |
@@ -95,9 +94,11 @@ flowchart LR
 ## Documentation = video scripts
 
 Each file in [`docs/`](docs) is one lifecycle step written as a recordable segment, with the
-exact commands to run on camera and the talking points to say. The three
-[`docs/scripts/`](docs/scripts) files are full shooting scripts for the three headline videos,
-reusing the step explainers so you never re-explain the build from scratch.
+exact commands to run on camera and the talking points to say. The two
+[`docs/scripts/`](docs/scripts) files —
+[`video-1-oracle.md`](docs/scripts/video-1-oracle.md) and
+[`video-2-battle.md`](docs/scripts/video-2-battle.md) — are full shooting scripts for the two
+headline videos, reusing the step explainers so you never re-explain the build from scratch.
 
 Start at [`docs/00-overview.md`](docs/00-overview.md).
 
