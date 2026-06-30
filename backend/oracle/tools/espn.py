@@ -95,11 +95,28 @@ class EspnProvider:
             "color": f"#{color}" if color else None,
         }
 
+    @staticmethod
+    def _shootout(competitor: dict[str, Any]) -> int | None:
+        raw = competitor.get("shootoutScore")
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
     def _simplify(self, event: dict[str, Any]) -> dict[str, Any]:
         comp = event["competitions"][0]
         home, away = self._sides(event)
         state = event.get("status", {}).get("type", {}).get("state")
         hm, am = self._team_meta(home), self._team_meta(away)
+        # Real advancer + shootout (covers knockout ties decided on penalties).
+        winner_team = None
+        if state == "post":
+            if home.get("winner"):
+                winner_team = hm["name"]
+            elif away.get("winner"):
+                winner_team = am["name"]
+        hs, as_ = self._shootout(home), self._shootout(away)
+        pens = f"{hs}-{as_}" if hs is not None and as_ is not None else None
         return {
             "match_id": int(event["id"]),
             "status": _STATE_TO_STATUS.get(state, state),
@@ -111,6 +128,8 @@ class EspnProvider:
             "away_meta": am,
             "home_goals": self._score(home) if state == "post" else None,
             "away_goals": self._score(away) if state == "post" else None,
+            "winner_team": winner_team,
+            "pens": pens,
             "venue": (comp.get("venue", {}) or {}).get("fullName"),
         }
 

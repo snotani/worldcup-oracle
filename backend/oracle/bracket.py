@@ -85,29 +85,39 @@ def team_meta(name: str) -> dict[str, Any]:
 
 # --- The fixed knockout tree ----------------------------------------------------------
 # Match ids: R32 = 1..16, R16 = 17..24, QF = 25..28, SF = 29..30, Final = 31.
-# Each R32 seed: (id, home, away, status, home_goals, away_goals).
-# Layout follows the official 2026 draw: ids 1-8 are the LEFT half (top -> bottom),
-# ids 9-16 the RIGHT half. Adjacent odd/even pairs meet in the Round of 16.
-_SEED_R32: list[tuple[int, str, str, str, int | None, int | None]] = [
+# Each R32 seed: (id, home, away). Layout follows the official 2026 draw: ids 1-8 are the
+# LEFT half (top -> bottom), ids 9-16 the RIGHT half. Adjacent odd/even pairs meet in the
+# Round of 16.
+_SEED_R32: list[tuple[int, str, str]] = [
     # Left half
-    (1, "Germany", "Paraguay", "NS", None, None),
-    (2, "Sweden", "France", "NS", None, None),
-    (3, "South Africa", "Canada", "FT", 0, 1),
-    (4, "Netherlands", "Morocco", "NS", None, None),
-    (5, "Portugal", "Croatia", "NS", None, None),
-    (6, "Spain", "Austria", "NS", None, None),
-    (7, "United States", "Bosnia-Herzegovina", "NS", None, None),
-    (8, "Belgium", "Senegal", "NS", None, None),
+    (1, "Germany", "Paraguay"),
+    (2, "Sweden", "France"),
+    (3, "South Africa", "Canada"),
+    (4, "Netherlands", "Morocco"),
+    (5, "Portugal", "Croatia"),
+    (6, "Spain", "Austria"),
+    (7, "United States", "Bosnia-Herzegovina"),
+    (8, "Belgium", "Senegal"),
     # Right half
-    (9, "Brazil", "Japan", "FT", 2, 1),
-    (10, "Norway", "Ivory Coast", "NS", None, None),
-    (11, "Mexico", "Ecuador", "NS", None, None),
-    (12, "England", "Congo DR", "NS", None, None),
-    (13, "Argentina", "Cape Verde", "NS", None, None),
-    (14, "Australia", "Egypt", "NS", None, None),
-    (15, "Switzerland", "Algeria", "NS", None, None),
-    (16, "Colombia", "Ghana", "NS", None, None),
+    (9, "Brazil", "Japan"),
+    (10, "Norway", "Ivory Coast"),
+    (11, "Mexico", "Ecuador"),
+    (12, "England", "Congo DR"),
+    (13, "Argentina", "Cape Verde"),
+    (14, "Australia", "Egypt"),
+    (15, "Switzerland", "Algeria"),
+    (16, "Colombia", "Ghana"),
 ]
+
+# Finished Round-of-32 results, live from ESPN as of 2026-06-30. `winner` overrides the
+# goals-based winner so penalty shootouts resolve correctly; `pens` is the shootout score
+# in home-away orientation (rendered as "1-1 (3-4 pens)").
+_R32_RESULTS: dict[int, dict[str, Any]] = {
+    1: {"home_goals": 1, "away_goals": 1, "winner": "Paraguay", "pens": "3-4"},   # Paraguay win 4-3 on pens; Germany out
+    3: {"home_goals": 0, "away_goals": 1, "winner": "Canada"},
+    4: {"home_goals": 1, "away_goals": 1, "winner": "Morocco", "pens": "2-3"},    # Morocco win 3-2 on pens; Netherlands out
+    9: {"home_goals": 2, "away_goals": 1, "winner": "Brazil"},
+}
 
 # winner of source match -> (target match id, "home" | "away" slot)
 _LINKS: dict[int, tuple[int, str]] = {
@@ -169,6 +179,14 @@ def _winner_of(home: str | None, away: str | None, hg: int | None, ag: int | Non
     return home if hg >= ag else away
 
 
+def _flip_pens(pens: str | None) -> str | None:
+    """Reverse a 'home-away' shootout score so it matches our orientation."""
+    if not pens or "-" not in pens:
+        return pens
+    a, b = pens.split("-", 1)
+    return f"{b}-{a}"
+
+
 def build_bracket_state(provider: Any | None = None) -> dict[str, Any]:
     """Return the current knockout bracket: every match, its teams, and known results.
 
@@ -187,15 +205,25 @@ def build_bracket_state(provider: Any | None = None) -> dict[str, Any]:
             "away": None,
             "home_goals": None,
             "away_goals": None,
+            "pens": None,
             "status": "NS",
             "winner": None,
             "feeds": _LINKS.get(mid),
         }
 
-    for mid, home, away, status, hg, ag in _SEED_R32:
+    for mid, home, away in _SEED_R32:
         m = matches[mid]
-        m.update(home=home, away=away, status=status, home_goals=hg, away_goals=ag)
-        m["winner"] = _winner_of(home, away, hg, ag)
+        m.update(home=home, away=away)
+        res = _R32_RESULTS.get(mid)
+        if res:
+            hg, ag = res["home_goals"], res["away_goals"]
+            m.update(
+                status="FT",
+                home_goals=hg,
+                away_goals=ag,
+                pens=res.get("pens"),
+                winner=res.get("winner") or _winner_of(home, away, hg, ag),
+            )
 
     if provider is not None:
         _refresh_from_provider(matches, provider)
@@ -223,13 +251,15 @@ def _refresh_from_provider(matches: dict[int, dict[str, Any]], provider: Any) ->
         f = by_pair.get(frozenset({m["home"], m["away"]}))
         if not f or f.get("home_goals") is None:
             continue
-        # Align goals to our home/away orientation.
+        # Align goals (and any shootout) to our home/away orientation.
         if f["home_team"] == m["home"]:
-            hg, ag = f["home_goals"], f["away_goals"]
+            hg, ag, pens = f["home_goals"], f["away_goals"], f.get("pens")
         else:
             hg, ag = f["away_goals"], f["home_goals"]
-        m.update(status="FT", home_goals=hg, away_goals=ag,
-                 winner=_winner_of(m["home"], m["away"], hg, ag))
+            pens = _flip_pens(f.get("pens"))
+        # Honour the real advancer (covers extra time / penalties); fall back to goals.
+        winner = f.get("winner_team") or _winner_of(m["home"], m["away"], hg, ag)
+        m.update(status="FT", home_goals=hg, away_goals=ag, pens=pens, winner=winner)
 
 
 def _advance_known_winner(matches: dict[int, dict[str, Any]], mid: int) -> None:

@@ -121,6 +121,8 @@ def simulate_bracket(
         if is_result:
             winner = m["winner"]
             score = f"{m['home_goals']}-{m['away_goals']}"
+            if m.get("pens"):
+                score += f" ({m['pens']} pens)"
         else:
             winner = home if h_adv >= a_adv else away
             winner_adv = h_adv if winner == home else a_adv
