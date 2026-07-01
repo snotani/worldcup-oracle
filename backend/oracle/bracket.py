@@ -109,14 +109,17 @@ _SEED_R32: list[tuple[int, str, str]] = [
     (16, "Colombia", "Ghana"),
 ]
 
-# Finished Round-of-32 results, live from ESPN as of 2026-06-30. `winner` overrides the
+# Finished Round-of-32 results, live from ESPN as of 2026-07-01. `winner` overrides the
 # goals-based winner so penalty shootouts resolve correctly; `pens` is the shootout score
 # in home-away orientation (rendered as "1-1 (3-4 pens)").
 _R32_RESULTS: dict[int, dict[str, Any]] = {
     1: {"home_goals": 1, "away_goals": 1, "winner": "Paraguay", "pens": "3-4"},   # Paraguay win 4-3 on pens; Germany out
+    2: {"home_goals": 0, "away_goals": 3, "winner": "France"},                    # France 3-0 Sweden
     3: {"home_goals": 0, "away_goals": 1, "winner": "Canada"},
     4: {"home_goals": 1, "away_goals": 1, "winner": "Morocco", "pens": "2-3"},    # Morocco win 3-2 on pens; Netherlands out
     9: {"home_goals": 2, "away_goals": 1, "winner": "Brazil"},
+    10: {"home_goals": 2, "away_goals": 1, "winner": "Norway"},                   # Norway 2-1 Ivory Coast
+    11: {"home_goals": 2, "away_goals": 0, "winner": "Mexico"},                   # Mexico 2-0 Ecuador
 }
 
 # winner of source match -> (target match id, "home" | "away" slot)
