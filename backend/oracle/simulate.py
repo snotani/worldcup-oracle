@@ -24,7 +24,7 @@ from typing import Any
 from .agent import advancement, predict_from_context
 from .bracket import build_bracket_state, team_meta
 from .config import Settings, get_settings
-from .models import BATTLE_REGISTRY
+from .models import BATTLE_REGISTRY, ModelError
 from .schema import MatchContext, TeamForm
 from .trace import RunTrace
 
@@ -72,6 +72,26 @@ def _ctx_for(home: str, away: str, stage: str, match_id: int) -> MatchContext:
     )
 
 
+def _predict(ctx: MatchContext, model_id: str, settings: Settings, *, mock_model: bool):
+    """Predict one matchup, retrying once then falling back to the offline heuristic.
+
+    A full live battle is ~120 model calls; a single transient SDK/parse error shouldn't
+    abort a 45-minute run, so we degrade that one match to the mock backend instead.
+    """
+    if mock_model:
+        return predict_from_context(ctx, model_id=model_id, settings=settings,
+                                    mock_model=True, save=False)
+    for attempt in range(2):
+        try:
+            return predict_from_context(ctx, model_id=model_id, settings=settings,
+                                        mock_model=False, save=False)
+        except (ModelError, ValueError):
+            if attempt == 0:
+                continue
+    return predict_from_context(ctx, model_id=model_id, settings=settings,
+                                mock_model=True, save=False)
+
+
 def _stable_choice(options: list[str], *seed_parts: str) -> str:
     h = hashlib.sha256("|".join(seed_parts).encode()).hexdigest()
     return options[int(h, 16) % len(options)]
@@ -111,13 +131,14 @@ def simulate_bracket(
             # Defensive: a feeder hasn't resolved (shouldn't happen walking in id order).
             continue
 
+        is_result = m["status"] == "FT" and bool(m["winner"])
+
         ctx = _ctx_for(home, away, m["round_name"], 90000 + mid)
-        stored, _ = predict_from_context(
-            ctx, model_id=model_id, settings=settings, mock_model=mock_model, save=False
-        )
+        # Only spend a live model call on games still to be played; decided ties use the
+        # cheap offline heuristic purely for the on-screen advantage bars.
+        stored, _ = _predict(ctx, model_id, settings, mock_model=mock_model or is_result)
         h_adv, a_adv = advancement(stored.prediction.probabilities)
 
-        is_result = m["status"] == "FT" and bool(m["winner"])
         if is_result:
             winner = m["winner"]
             score = f"{m['home_goals']}-{m['away_goals']}"
